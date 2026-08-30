@@ -82,7 +82,10 @@ WSGI_APPLICATION = "procurement_platform.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": config(
+            "SQLITE_DB_PATH",
+            default=str(BASE_DIR / "db.sqlite3"),
+        ),
     }
 }
 
@@ -123,7 +126,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:farmer_login"
 LOGIN_REDIRECT_URL = "accounts:dashboard"
