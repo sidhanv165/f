@@ -69,6 +69,7 @@ class Command(BaseCommand):
                 booking = ProcurementRequest(
                     farmer=user,
                     centre=centre,
+                    district=centre.district,
                     crop=random.choice(["Paddy", "Wheat", "Maize"]),
                     quantity=random.choice([100, 200, 250, 500]),
                     preferred_date=preferred,

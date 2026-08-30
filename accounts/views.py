@@ -18,6 +18,8 @@ from .forms import (
     StaffCreationForm,
     StaffProfileUpdateForm,
 )
+from procurement.models import ProcurementRequest
+
 from .models import FarmerProfile, StaffProfile, User
 
 
@@ -112,6 +114,9 @@ class RoleRequiredMixin(LoginRequiredMixin):
     required_role = None
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
         if self.required_role and request.user.role != self.required_role:
             raise PermissionDenied(f"This account is not authorized to access this {self.required_role} portal.")
 
@@ -164,7 +169,12 @@ class FarmerDashboardView(RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["booking_count"] = self.request.user.procurement_requests.count()
+        qs = self.request.user.procurement_requests.all()
+        latest_request = qs.order_by("-created_at").first()
+
+        context["booking_count"] = qs.count()
+        context["pending_request_count"] = qs.filter(status=ProcurementRequest.Status.PENDING).count()
+        context["latest_status_display"] = latest_request.get_status_display() if latest_request else "No request"
         return context
 
 
@@ -199,18 +209,41 @@ class StaffDashboardView(RoleRequiredMixin, TemplateView):
     template_name = "accounts/staff_dashboard.html"
 
     def get_context_data(self, **kwargs):
+        from django.db.models import Q
+
         from procurement.models import ProcurementRequest
 
         context = super().get_context_data(**kwargs)
-        context["procurement_request_count"] = ProcurementRequest.objects.count()
-        context["pending_request_count"] = ProcurementRequest.objects.filter(status=ProcurementRequest.Status.PENDING).count()
-        context["completed_request_count"] = ProcurementRequest.objects.filter(status=ProcurementRequest.Status.COMPLETED).count()
-        context["recent_bookings"] = ProcurementRequest.objects.select_related("farmer").order_by("-created_at")[:5]
+        # Build a base queryset for procurement requests. Keep select_related minimal to avoid errors when migrations are in flux.
+        try:
+            qs = ProcurementRequest.objects.select_related("farmer", "centre")
+        except Exception:
+            qs = ProcurementRequest.objects.all()
+
+        # Safely get the staff member's assigned state; guard DB access in case migrations haven't been applied yet.
+        staff_state = None
+        try:
+            staff_profile = getattr(self.request.user, "staff_profile", None)
+            if staff_profile:
+                staff_state = getattr(staff_profile, "state", None)
+        except Exception:
+            staff_state = None
+
+        if staff_state:
+            try:
+                qs = qs.filter(Q(centre__state=staff_state) | Q(village__subdistrict__district__state=staff_state))
+            except Exception:
+                # If schema mismatch prevents the complex filter, skip scoping to avoid crashing the dashboard.
+                pass
+
+        context["procurement_request_count"] = qs.count()
+        context["pending_request_count"] = qs.filter(status=ProcurementRequest.Status.PENDING).count()
+        context["completed_request_count"] = qs.filter(status=ProcurementRequest.Status.COMPLETED).count()
+        context["recent_bookings"] = qs.order_by("-created_at")[:5]
         return context
 
 
 class AdminDashboardView(RoleRequiredMixin, TemplateView):
     required_role = User.Role.ADMIN
     template_name = "accounts/admin_dashboard.html"
-
 

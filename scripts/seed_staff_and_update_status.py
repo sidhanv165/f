@@ -34,11 +34,14 @@ for s in staff_specs:
         print(f"Created staff user: {mobile} -> {user.full_name}")
 
     if not hasattr(user, 'staff_profile') or user.staff_profile is None:
-        StaffProfile.objects.create(user=user, designation=s["designation"])
+        first_state_id = ProcurementCentre.objects.filter(state__isnull=False).values_list("state_id", flat=True).first()
+        StaffProfile.objects.create(user=user, designation=s["designation"], state_id=first_state_id)
         print(f"  Created StaffProfile for {mobile}")
     else:
         profile = user.staff_profile
         profile.designation = profile.designation or s["designation"]
+        if profile.state_id is None:
+            profile.state_id = ProcurementCentre.objects.filter(state__isnull=False).values_list("state_id", flat=True).first()
         profile.save()
 
 # Ensure bookings have a centre assignment
@@ -48,11 +51,11 @@ if not centre_list:
 else:
     for booking in ProcurementRequest.objects.filter(centre__isnull=True):
         booking.centre = centre_list[booking.pk % len(centre_list)]
-        booking.save(update_fields=['centre'])
-
-    for booking in ProcurementRequest.objects.filter(state__in=['', None]):
-        booking.state = 'Maharashtra'
-        booking.save(update_fields=['state'])
+        update_fields = ['centre']
+        if booking.district_id is None:
+            booking.district = booking.centre.district
+            update_fields.append('district')
+        booking.save(update_fields=update_fields)
 
 # Update four bookings to different statuses
 statuses = [ProcurementRequest.Status.ALLOCATED, ProcurementRequest.Status.VERIFIED, ProcurementRequest.Status.COMPLETED, ProcurementRequest.Status.PENDING]

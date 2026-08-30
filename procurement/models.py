@@ -76,9 +76,7 @@ class ProcurementCentre(TimeStampedModel):
     code = models.CharField(max_length=50, unique=True, db_index=True)
     name = models.CharField(max_length=200)
     state = models.ForeignKey(State, on_delete=models.PROTECT, related_name="procurement_centres", null=True, blank=True)
-    # district relationship removed intentionally: procurement centres are not guaranteed to be district-scoped.
-    # If needed later, centres can be associated with a village (optional) or a state.
-    village = models.ForeignKey(Village, on_delete=models.PROTECT, related_name="procurement_centres", null=True, blank=True)
+    district = models.ForeignKey(District, on_delete=models.PROTECT, related_name="procurement_centres", null=True, blank=True)
     agency = models.CharField(max_length=150, blank=True, default="")
     crop = models.CharField(max_length=100, blank=True, default="")
     season = models.CharField(max_length=80, blank=True, default="")
@@ -91,8 +89,9 @@ class ProcurementCentre(TimeStampedModel):
     slots_per_day = models.PositiveIntegerField(null=True, blank=True, help_text="If set, maximum tickets per day for this centre. Null = unlimited")
 
     class Meta:
-        ordering = ["state__name", "name"]
+        ordering = ["state__name", "district__name", "name"]
         indexes = [
+            models.Index(fields=["state", "district", "name"]),
             models.Index(fields=["state", "name"]),
             models.Index(fields=["code"]),
             models.Index(fields=["agency", "name"]),
@@ -115,8 +114,8 @@ class ProcurementRequest(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="procurement_requests",
     )
-    village = models.ForeignKey(
-        Village,
+    district = models.ForeignKey(
+        District,
         on_delete=models.PROTECT,
         related_name="procurement_requests",
         null=True,
@@ -145,24 +144,10 @@ class ProcurementRequest(TimeStampedModel):
 
     @property
     def state(self):
-        if self.village_id:
-            return self.village.subdistrict.district.state
+        if self.district_id:
+            return self.district.state
         if self.centre_id:
             return self.centre.state
-        return None
-
-    @property
-    def district(self):
-        # district can be derived from village; procurement centres are not district-scoped in this model.
-        if self.village_id:
-            return self.village.subdistrict.district
-        # cannot reliably derive district from a centre that is only state-scoped
-        return None
-
-    @property
-    def subdistrict(self):
-        if self.village_id:
-            return self.village.subdistrict
         return None
 
     @property
@@ -219,6 +204,9 @@ class ProcurementRequest(TimeStampedModel):
                             candidate = max(occupied_set) + 1 if occupied_set else 1
 
                         self.ticket_number = candidate
+                        update_fields = kwargs.get("update_fields")
+                        if update_fields is not None and "ticket_number" not in update_fields:
+                            kwargs["update_fields"] = [*update_fields, "ticket_number"]
                         # attempt to save; unique constraint will prevent duplicates
                         super().save(*args, **kwargs)
                         return
@@ -233,12 +221,11 @@ class ProcurementRequest(TimeStampedModel):
     def valid_centres(self):
         centres = ProcurementCentre.objects.filter(is_active=True)
         state_obj = self.state
-        # Prefer centres that match the village's state and optionally match the village
-        if self.village_id:
-            centres = centres.filter(state=state_obj).filter(Q(village__isnull=True) | Q(village=self.village))
+        if self.district_id:
+            centres = centres.filter(state=state_obj).filter(Q(district__isnull=True) | Q(district=self.district))
         elif state_obj:
             centres = centres.filter(state=state_obj)
-        # If no state or village information is available, return all active centres
+        # If no state or district information is available, return all active centres.
         return centres.order_by("name")
 
     def can_assign_centre(self, centre):
@@ -246,15 +233,12 @@ class ProcurementRequest(TimeStampedModel):
             return False
         if not centre.is_active:
             return False
-        # If booking tied to a village, ensure centre is in the same state and if centre is village-scoped it matches
-        if self.village_id:
-            village_state = self.village.subdistrict.district.state
-            if centre.state_id != village_state.id:
+        if self.district_id:
+            if centre.state_id != self.district.state_id:
                 return False
-            if centre.village_id and centre.village_id != self.village_id:
+            if centre.district_id and centre.district_id != self.district_id:
                 return False
             return True
-        # If booking is only scoped to state/district, require centre's state to match
         state_obj = self.state
         if state_obj and centre.state_id != state_obj.id:
             return False

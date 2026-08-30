@@ -34,7 +34,7 @@ class ProcurementRequestForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["state"].queryset = State.objects.order_by("name")
-        # If editing an existing request that has a village, derive initial state/district
+        # If editing an existing request, derive the state from the saved district.
         self._apply_initial_queryset_state()
         self._update_district_queryset()
         self._update_centre_queryset()
@@ -47,10 +47,9 @@ class ProcurementRequestForm(forms.ModelForm):
         return value
 
     def _apply_initial_queryset_state(self):
-        # preserve behavior when an existing instance has a village set
-        if self.instance and self.instance.pk and getattr(self.instance, "village", None):
+        if self.instance and self.instance.pk and getattr(self.instance, "district", None):
             try:
-                district = self.instance.village.subdistrict.district
+                district = self.instance.district
                 self.initial.setdefault("state", district.state)
                 self.initial.setdefault("district", district)
             except Exception:
@@ -73,12 +72,13 @@ class ProcurementRequestForm(forms.ModelForm):
 
     def _update_centre_queryset(self):
         district_id = self._selected_district_pk()
-        queryset = ProcurementCentre.objects.filter(is_active=True).select_related("state", "village").order_by("name")
-        # If a district is selected, use its state to filter centres because centres are state-scoped
+        queryset = ProcurementCentre.objects.filter(is_active=True).select_related("state", "district").order_by("name")
         if district_id:
             try:
                 district_obj = District.objects.get(pk=district_id)
-                queryset = queryset.filter(state_id=district_obj.state_id)
+                queryset = queryset.filter(state_id=district_obj.state_id).filter(
+                    Q(district__isnull=True) | Q(district=district_obj)
+                )
             except District.DoesNotExist:
                 queryset = queryset.none()
         else:
@@ -90,13 +90,18 @@ class ProcurementRequestForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        state = cleaned_data.get("state")
         district = cleaned_data.get("district")
         centre = cleaned_data.get("centre")
 
+        if state and district and district.state_id != state.id:
+            self.add_error("district", "The selected district does not belong to the chosen state.")
+
         if district and centre:
-            # centres are state-scoped in this deployment; ensure centre.state matches district.state
             if centre.state_id != district.state_id:
                 self.add_error("centre", "The selected procurement centre is not in the chosen district's state.")
+            if centre.district_id and centre.district_id != district.id:
+                self.add_error("centre", "The selected procurement centre is not available for the chosen district.")
 
         # slot availability check: preferred_date is the slot date
         preferred_date = cleaned_data.get("preferred_date")

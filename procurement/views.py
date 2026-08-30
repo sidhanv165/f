@@ -65,6 +65,9 @@ class RoleRequiredMixin(LoginRequiredMixin):
     required_role = None
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
         if self.required_role and request.user.role != self.required_role:
             return redirect("accounts:dashboard")
         return super().dispatch(request, *args, **kwargs)
@@ -79,7 +82,7 @@ class FarmerBookingView(RoleRequiredMixin, TemplateView):
         context["form"] = ProcurementRequestForm()
         context["bookings"] = self.request.user.procurement_requests.select_related(
             "centre",
-            "village__subdistrict__district__state",
+            "district__state",
         ).all()[:10]
         return context
 
@@ -107,7 +110,7 @@ class FarmerBookingsView(RoleRequiredMixin, TemplateView):
         context["form"] = ProcurementRequestForm()
         qs = self.request.user.procurement_requests.select_related(
             "centre",
-            "village__subdistrict__district__state",
+            "district__state",
         ).order_by("-created_at")
         # paginate results
         from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -139,7 +142,7 @@ class FarmerTicketView(RoleRequiredMixin, TemplateView):
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
         booking = get_object_or_404(
-            ProcurementRequest.objects.select_related("farmer", "centre", "village__subdistrict__district__state"),
+            ProcurementRequest.objects.select_related("farmer", "centre", "district__state"),
             pk=pk,
             farmer=self.request.user,
         )
@@ -153,7 +156,7 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        qs = ProcurementRequest.objects.select_related("farmer", "centre", "village__subdistrict__district__state")
+        qs = ProcurementRequest.objects.select_related("farmer", "centre", "district__state")
 
         # Restrict visible bookings to the staff member's assigned state (if set).
         staff_state = None
@@ -167,7 +170,7 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
             staff_state = None
 
         if staff_state:
-            qs = qs.filter(Q(centre__state=staff_state) | Q(village__subdistrict__district__state=staff_state))
+            qs = qs.filter(Q(district__state=staff_state) | Q(district__isnull=True, centre__state=staff_state))
 
         status = self.request.GET.get("status")
         state = self.request.GET.get("state")
@@ -176,15 +179,17 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
         q = self.request.GET.get("q")
         start_date = self.request.GET.get("start_date")
         end_date = self.request.GET.get("end_date")
-        ordering = self.request.GET.get("ordering", "-created_at")
+        requested_ordering = self.request.GET.get("ordering", "-created_at")
+        allowed_orderings = {"-created_at", "created_at", "preferred_date", "-preferred_date"}
+        ordering = requested_ordering if requested_ordering in allowed_orderings else "-created_at"
 
         if status:
             qs = qs.filter(status=status)
         # 'state' filter parameter is still accepted (admin/staff may override via querystring) but it will be intersected with staff_state
         if state:
-            qs = qs.filter(village__subdistrict__district__state_id=state)
+            qs = qs.filter(Q(district__state_id=state) | Q(district__isnull=True, centre__state_id=state))
         if district:
-            qs = qs.filter(village__subdistrict__district_id=district)
+            qs = qs.filter(district_id=district)
         if centre:
             qs = qs.filter(centre_id=centre)
         if q:
@@ -212,6 +217,8 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
             page_size = int(self.request.GET.get("page_size", 20))
         except (TypeError, ValueError):
             page_size = 20
+        if page_size not in {10, 20, 50}:
+            page_size = 20
 
         paginator = Paginator(qs, page_size)
         try:
@@ -226,14 +233,15 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
         context["paginator"] = paginator
         context["is_paginated"] = paginator.num_pages > 1
 
-        params = {k: v for k, v in self.request.GET.items() if k != "page"}
-        context["base_qs"] = "&".join(f"{key}={value}" for key, value in params.items())
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        context["base_qs"] = params.urlencode()
 
         # Counts should reflect the staff member's scope (their assigned state) if set
         counts_qs = ProcurementRequest.objects.all()
         try:
             if staff_state:
-                counts_qs = counts_qs.filter(Q(centre__state=staff_state) | Q(village__subdistrict__district__state=staff_state))
+                counts_qs = counts_qs.filter(Q(district__state=staff_state) | Q(district__isnull=True, centre__state=staff_state))
         except Exception:
             # Database schema may not include staff state yet; skip scoped counts
             counts_qs = ProcurementRequest.objects.all()
@@ -254,7 +262,12 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
             "ordering": ordering or "-created_at",
             "page_size": page_size,
         }
-        context["available_centres"] = ProcurementCentre.objects.filter(is_active=True).order_by("name")
+        available_centres = ProcurementCentre.objects.filter(is_active=True).select_related("state", "district").order_by("name")
+        if staff_state:
+            available_centres = available_centres.filter(state=staff_state)
+        context["available_centres"] = available_centres
+        for booking in bookings_page.object_list:
+            booking.available_centres_for_action = booking.valid_centres()
         context["state_choices"] = State.objects.order_by("name")
         # If a state filter is provided in the request, pre-filter districts for that state
         state_filter = self.request.GET.get("state")
@@ -271,9 +284,11 @@ class StaffQueueView(RoleRequiredMixin, TemplateView):
 
 @user_passes_test(lambda user: user.is_authenticated and user.role == User.Role.STAFF)
 def update_booking_status(request, pk):
-    booking = get_object_or_404(ProcurementRequest, pk=pk)
+    booking = get_object_or_404(ProcurementRequest.objects.select_related("centre", "district__state"), pk=pk)
     new_status = request.POST.get("status")
     centre_id = request.POST.get("centre")
+    valid_statuses = {choice[0] for choice in ProcurementRequest.Status.choices}
+    changed_fields = []
 
     # Ensure the acting staff member is allowed to modify this booking (must be assigned to the same state)
     # Safely determine staff state; if migrations pending, fall back to no restriction
@@ -292,30 +307,33 @@ def update_booking_status(request, pk):
 
     if centre_id:
         centre = get_object_or_404(ProcurementCentre, pk=centre_id)
+        if staff_state and centre.state_id != staff_state.id and not request.user.is_superuser:
+            messages.error(request, "You are not authorized to assign centres outside your assigned state.")
+            return redirect("procurement:staff_queue")
         if not booking.can_assign_centre(centre):
             messages.error(request, "Selected centre does not match the booking's location.")
             return redirect("procurement:staff_queue")
-        booking.centre = centre
+        if booking.centre_id != centre.id:
+            booking.centre = centre
+            changed_fields.append("centre")
 
-    if new_status in {choice[0] for choice in ProcurementRequest.Status.choices}:
+    if new_status in valid_statuses and booking.status != new_status:
         booking.status = new_status
+        changed_fields.append("status")
 
-    if booking.centre_id and "centre" in request.POST:
-        booking.save(update_fields=["status", "centre"])
-    elif new_status in {choice[0] for choice in ProcurementRequest.Status.choices}:
-        booking.save(update_fields=["status"])
+    if changed_fields:
+        booking.save(update_fields=changed_fields)
+        if new_status in valid_statuses:
+            messages.success(request, f"Booking {booking.token_number} updated to {booking.get_status_display()}.")
     else:
-        booking.save(update_fields=["centre"])
-
-    if new_status in {choice[0] for choice in ProcurementRequest.Status.choices}:
-        messages.success(request, f"Booking {booking.token_number} updated to {booking.get_status_display()}.")
+        messages.info(request, f"No changes were made to booking {booking.token_number}.")
     return redirect("procurement:staff_queue")
 
 
 @user_passes_test(lambda user: user.is_authenticated and user.role == User.Role.FARMER)
 def farmer_ticket_pdf(request, pk):
     booking = get_object_or_404(
-        ProcurementRequest.objects.select_related("farmer", "centre", "village__subdistrict__district__state"),
+        ProcurementRequest.objects.select_related("farmer", "centre", "district__state"),
         pk=pk,
         farmer=request.user,
     )
@@ -336,7 +354,6 @@ def farmer_ticket_pdf(request, pk):
         ("Mobile", getattr(booking.farmer, 'mobile', '')),
         ("State", booking.state.name if booking.state else "-"),
         ("District", booking.district.name if booking.district else "-"),
-        ("Village", booking.village.name if booking.village else "-"),
         ("Centre", booking.centre.name if booking.centre else "Pending assignment"),
         ("Crop", booking.crop),
         ("Quantity", f"{booking.quantity} kg"),
@@ -406,16 +423,14 @@ def api_villages(request):
 @permission_classes([AllowAny])
 def api_procurement_centres(request):
     district_id = request.GET.get("district")
-    village_id = request.GET.get("village")
     state_id = request.GET.get("state")
-    queryset = ProcurementCentre.objects.filter(is_active=True).select_related("state", "village")
-    if village_id:
-        queryset = queryset.filter(village_id=village_id)
-    elif district_id:
-        # centres are state-scoped; derive state from district
+    queryset = ProcurementCentre.objects.filter(is_active=True).select_related("state", "district")
+    if district_id:
         try:
             district_obj = District.objects.get(pk=int(district_id))
-            queryset = queryset.filter(state_id=district_obj.state_id)
+            queryset = queryset.filter(state_id=district_obj.state_id).filter(
+                Q(district__isnull=True) | Q(district=district_obj)
+            )
         except (District.DoesNotExist, ValueError):
             queryset = queryset.none()
     elif state_id:

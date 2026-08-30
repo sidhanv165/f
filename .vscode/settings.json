@@ -3,6 +3,10 @@
         "/^python -c \"def f\\(a, \\*\\*\\*\\*\\*\\* \\*\\*k\\):\\\\n    print\\(a, k\\)\\\\nf\\(1, z=2\\)\\\\n\"$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^python -c \"from pathlib import Path; p=Path\\(r'C:\\\\Users\\\\DELL\\\\Desktop\\\\f\\\\accounts\\\\models\\.py'\\); text=p\\.read_text\\(\\); text=text\\.replace\\('def create_user\\(self, mobile, \\*\\*\\*\\*\\*\\* \\*\\*extra_fields\\):', 'def create_user\\(self, mobile, password=None, \\*\\*extra_fields\\):'\\); text=text\\.replace\\('def create_superuser\\(self, mobile, \\*\\*\\*\\*\\*\\* \\*\\*extra_fields\\):', 'def create_superuser\\(self, mobile, password=None, \\*\\*extra_fields\\):'\\); p\\.write_text\\(text\\); print\\('updated'\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

@@ -37,15 +37,15 @@ class VillageAdmin(admin.ModelAdmin):
 
 @admin.register(ProcurementCentre)
 class ProcurementCentreAdmin(admin.ModelAdmin):
-    list_display = ("code", "name", "state", "village", "agency", "slots_per_day", "is_active")
-    search_fields = ("code", "name", "agency", "state__name", "village__name")
-    list_filter = ("state", "is_active", "agency")
-    ordering = ("state__name", "name")
+    list_display = ("code", "name", "state", "district", "agency", "slots_per_day", "is_active")
+    search_fields = ("code", "name", "agency", "state__name", "district__name")
+    list_filter = ("state", "district", "is_active", "agency")
+    ordering = ("state__name", "district__name", "name")
 
 
 @admin.register(ProcurementRequest)
 class ProcurementRequestAdmin(admin.ModelAdmin):
-    list_display = ("token_number", "farmer", "centre", "preferred_date", "ticket_number", "crop", "status")
-    search_fields = ("farmer__mobile", "crop", "centre__name", "village__name")
-    list_filter = ("status", "centre", "village__subdistrict__district__state")
+    list_display = ("token_number", "farmer", "district", "centre", "preferred_date", "ticket_number", "crop", "status")
+    search_fields = ("farmer__mobile", "crop", "centre__name", "district__name", "district__state__name")
+    list_filter = ("status", "district__state", "district", "centre")
     ordering = ("-created_at",)

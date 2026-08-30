@@ -248,13 +248,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="procurementcentre",
-            index=models.Index(
-                fields=["state", "district", "name"],
-                name="procurement_state_i_285464_idx",
-            ),
-        ),
-        migrations.AddIndex(
-            model_name="procurementcentre",
             index=models.Index(fields=["code"], name="procurement_code_e0a38a_idx"),
         ),
         migrations.AddIndex(

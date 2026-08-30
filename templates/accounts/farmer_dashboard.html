@@ -16,17 +16,17 @@
 <section class="metric-grid" aria-label="Farmer procurement status">
     <article class="metric-card">
         <span class="metric-label">Bookings</span>
-        <strong>{{ user.procurement_requests.count }}</strong>
+        <strong>{{ booking_count|default:0 }}</strong>
         <p>Current farmer requests submitted.</p>
     </article>
     <article class="metric-card">
         <span class="metric-label">Pending</span>
-        <strong>{% if user.procurement_requests %}{{ user.procurement_requests.all|length }}{% else %}0{% endif %}</strong>
+        <strong>{{ pending_request_count|default:0 }}</strong>
         <p>Requests awaiting staff review.</p>
     </article>
     <article class="metric-card">
         <span class="metric-label">Latest status</span>
-        <strong>{% if user.procurement_requests.exists %}{{ user.procurement_requests.first.get_status_display }}{% else %}No request{% endif %}</strong>
+        <strong>{{ latest_status_display|default:"No request" }}</strong>
         <p>Most recent booking progress.</p>
     </article>
 </section>

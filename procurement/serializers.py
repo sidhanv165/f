@@ -29,7 +29,7 @@ class VillageSerializer(serializers.ModelSerializer):
 
 class ProcurementCentreSerializer(serializers.ModelSerializer):
     state_name = serializers.CharField(source="state.name", read_only=True)
-    village_name = serializers.CharField(source="village.name", read_only=True, allow_null=True)
+    district_name = serializers.CharField(source="district.name", read_only=True, allow_null=True)
 
     class Meta:
         model = ProcurementCentre
@@ -41,5 +41,5 @@ class ProcurementCentreSerializer(serializers.ModelSerializer):
             "crop",
             "season",
             "state_name",
-            "village_name",
+            "district_name",
         ]

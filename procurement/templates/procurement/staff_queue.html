@@ -64,6 +64,24 @@
                 </select>
             </label>
             <label class="filter-field">
+                <span class="filter-label">District</span>
+                <select name="district">
+                    <option value="">All districts</option>
+                    {% for district in district_choices %}
+                        <option value="{{ district.pk }}" {% if filters.district|default:'' == district.pk|stringformat:'s' %}selected{% endif %}>{{ district.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="filter-field">
+                <span class="filter-label">Centre</span>
+                <select name="centre">
+                    <option value="">All centres</option>
+                    {% for centre in available_centres %}
+                        <option value="{{ centre.pk }}" {% if filters.centre|default:'' == centre.pk|stringformat:'s' %}selected{% endif %}>{{ centre.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="filter-field">
                 <span class="filter-label">From date</span>
                 <input type="date" name="start_date" value="{{ filters.start_date }}">
             </label>
@@ -77,6 +95,7 @@
                     <option value="-created_at" {% if filters.ordering == '-created_at' %}selected{% endif %}>Newest</option>
                     <option value="created_at" {% if filters.ordering == 'created_at' %}selected{% endif %}>Oldest</option>
                     <option value="preferred_date" {% if filters.ordering == 'preferred_date' %}selected{% endif %}>Preferred date</option>
+                    <option value="-preferred_date" {% if filters.ordering == '-preferred_date' %}selected{% endif %}>Latest visit date</option>
                 </select>
             </label>
             <label class="filter-field">
@@ -103,6 +122,7 @@
                     <th>Token</th>
                     <th>Farmer</th>
                     <th>State</th>
+                    <th>District</th>
                     <th>Centre</th>
                     <th>Crop</th>
                     <th>Quantity</th>
@@ -118,6 +138,7 @@
                             <td>{{ booking.token_number }}</td>
                             <td>{{ booking.farmer.full_name|default:booking.farmer.mobile }}</td>
                             <td>{{ booking.state|default:"-" }}</td>
+                            <td>{{ booking.district|default:"-" }}</td>
                             <td>{{ booking.centre.name|default:"Unassigned" }}</td>
                             <td>{{ booking.crop }}</td>
                             <td>{{ booking.quantity }} kg</td>
@@ -126,6 +147,14 @@
                             <td>
                                 <form method="post" action="{% url 'procurement:update_booking_status' booking.pk %}">
                                     {% csrf_token %}
+                                    <select name="centre" aria-label="Assign centre for {{ booking.token_number }}">
+                                        <option value="">Keep centre</option>
+                                        {% for centre in booking.available_centres_for_action %}
+                                            <option value="{{ centre.pk }}" {% if booking.centre_id == centre.pk %}selected{% endif %}>
+                                                {{ centre.name }}{% if centre.district %} - {{ centre.district.name }}{% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
                                     <select name="status" aria-label="Update status for {{ booking.token_number }}">
                                         <option value="pending" {% if booking.status == 'pending' %}selected{% endif %}>Pending</option>
                                         <option value="allocated" {% if booking.status == 'allocated' %}selected{% endif %}>Allocated</option>
@@ -139,7 +168,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="9">No procurement requests available.</td>
+                        <td colspan="10">No procurement requests available.</td>
                     </tr>
                 {% endif %}
             </tbody>

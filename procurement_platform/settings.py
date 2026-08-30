@@ -27,7 +27,9 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-dev-key-change
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="127.0.0.1,localhost,testserver", cast=Csv())
+ALLOWED_HOSTS = list(config("DJANGO_ALLOWED_HOSTS", default="127.0.0.1,localhost,testserver", cast=Csv()))
+if DEBUG and "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
 
 
 # Application definition

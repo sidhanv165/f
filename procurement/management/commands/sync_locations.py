@@ -195,17 +195,21 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING("No districts CSV file found in %s" % RESOURCE_DIR))
 
-        if files["subdistricts"]:
+        if include_sublevels and files["subdistricts"]:
             for csv_path in files["subdistricts"]:
                 self.import_subdistricts(csv_path, stats)
-        else:
+        elif include_sublevels:
             self.stdout.write(self.style.WARNING("No subdistrict CSV file found in %s" % RESOURCE_DIR))
+        else:
+            self.stdout.write(self.style.NOTICE("Skipping subdistrict import. Pass --include-sublevels to import it."))
 
-        if files["villages"]:
+        if include_sublevels and files["villages"]:
             for csv_path in files["villages"]:
                 self.import_villages(csv_path, stats)
-        else:
+        elif include_sublevels:
             self.stdout.write(self.style.WARNING("No villages CSV file found in %s" % RESOURCE_DIR))
+        else:
+            self.stdout.write(self.style.NOTICE("Skipping village import. Pass --include-sublevels to import it."))
 
         self.stdout.write(self.style.SUCCESS("Import complete."))
         self.stdout.write(

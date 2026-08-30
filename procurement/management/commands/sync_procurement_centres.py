@@ -3,7 +3,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from procurement.models import District, ProcurementCentre, State, Village
+from procurement.models import District, ProcurementCentre, State
 
 
 RESOURCE_DIR = Path(__file__).resolve().parents[3] / "procurement" / "resource"
@@ -63,7 +63,6 @@ class Command(BaseCommand):
 
                 state_value = record.get("state") or record.get("state_name") or record.get("stateName") or record.get("state_lgd_name")
                 district_value = record.get("district") or record.get("district_name") or record.get("districtName") or record.get("district_lgd_name")
-                village_value = record.get("village") or record.get("village_name") or record.get("villageName")
                 agency = normalize_text(record.get("agency") or record.get("department") or record.get("agency_name"))
                 crop = normalize_text(record.get("crop") or record.get("commodity") or record.get("crop_name"))
                 season = normalize_text(record.get("season") or record.get("season_name"))
@@ -76,8 +75,7 @@ class Command(BaseCommand):
                     errors += 1
                     continue
 
-                # district resolution removed: procurement centres may be state-scoped only
-                village = None
+                district = self.resolve_district(state, district_value)
 
                 if not code:
                     # centre code: use state prefix + name
@@ -88,7 +86,7 @@ class Command(BaseCommand):
                     defaults={
                         "name": name,
                         "state": state,
-                        "village": village,
+                        "district": district,
                         "agency": agency,
                         "crop": crop,
                         "season": season,
@@ -118,12 +116,12 @@ class Command(BaseCommand):
             return State.objects.filter(lgd_code=int(key)).first()
         return None
 
-    def resolve_village(self, district, value):
-        # district parameter is not used anymore since centres may be state-scoped only
+    def resolve_district(self, state, value):
         if value in (None, ""):
             return None
         key = normalize_text(value)
         if not key:
             return None
-        # best-effort: try to match village by exact name across all villages (avoid creation if ambiguous)
-        return Village.objects.filter(name__iexact=key).first()
+        if str(key).isdigit():
+            return District.objects.filter(state=state, lgd_code=int(key)).first()
+        return District.objects.filter(state=state, name__iexact=key).first()
