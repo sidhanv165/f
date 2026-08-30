@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Farmer Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="landing-hero" aria-labelledby="landing-title">
+    <div class="hero-copy">
+        <p class="eyebrow">Digital procurement for modern farming</p>
+        <h1 id="landing-title">Farmer Procurement Platform</h1>
+        <p class="lead">
+            A transparent and efficient platform helping farmers register, manage their profile,
+            and stay connected with procurement centres through a simple digital workflow.
+        </p>
+
+        <div class="hero-actions">
+            <a class="primary-button" href="{% url 'accounts:farmer_register' %}">Register as Farmer</a>
+            <a class="secondary-button" href="{% url 'accounts:farmer_login' %}">Farmer Login</a>
+        </div>
+
+        <div class="stat-row" aria-label="Platform stats">
+            <div class="stat-item">
+                <strong>Farmer-first</strong>
+                <span>Public onboarding</span>
+            </div>
+            <div class="stat-item">
+                <strong>Secure & private</strong>
+                <span>Operational integrity</span>
+            </div>
+            <div class="stat-item">
+                <strong>Simple flow</strong>
+                <span>Clear process</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-panel">
+        <div class="mini-panel">
+            <div class="panel-topline">
+                <span class="dot dot-green"></span>
+                <span>Farmer login</span>
+            </div>
+
+            <form method="post" action="{% url 'accounts:farmer_login' %}" class="compact-form">
+                {% csrf_token %}
+                <div class="field-group">
+                    <label for="landing-mobile">Mobile number</label>
+                    <input id="landing-mobile" type="text" name="username" autocomplete="tel" placeholder="9876543210" required>
+                </div>
+                <div class="field-group">
+                    <label for="landing-password">Password</label>
+                    <input id="landing-password" type="password" name="password" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="primary-button full-width">Login to portal</button>
+            </form>
+
+            <div class="panel-footer">
+                <span>Need an account?</span>
+                <a href="{% url 'accounts:farmer_register' %}">Register</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="metrics-block" aria-label="Platform summary metrics">
+    <article class="metric-box">
+        <span class="metric-icon">✓</span>
+        <div>
+            <strong>Public farmer onboarding</strong>
+            <p>Easy self-registration and profile setup.</p>
+        </div>
+    </article>
+    <article class="metric-box">
+        <span class="metric-icon">▣</span>
+        <div>
+            <strong>Structured procurement flow</strong>
+            <p>Clear stages from registration to centre activity.</p>
+        </div>
+    </article>
+    <article class="metric-box">
+        <span class="metric-icon">◎</span>
+        <div>
+            <strong>Private operations</strong>
+            <p>Operational processes are kept private and secure.</p>
+        </div>
+    </article>
+</section>
+
+<section class="feature-grid" aria-label="Platform benefits">
+    <article class="feature-card">
+        <div class="icon-wrap green">🚜</div>
+        <div class="card-body">
+            <span class="metric-label">Farmer onboarding</span>
+            <h3>Simple registration</h3>
+            <p>Farmers can sign up quickly with their mobile and location details.</p>
+        </div>
+    </article>
+
+    <article class="feature-card">
+        <div class="icon-wrap blue">📊</div>
+        <div class="card-body">
+            <span class="metric-label">Transparent status</span>
+            <h3>Track the process</h3>
+            <p>Progress remains visible from profile setup to procurement activity.</p>
+        </div>
+    </article>
+
+    <article class="feature-card">
+        <div class="icon-wrap amber">🏢</div>
+        <div class="card-body">
+            <span class="metric-label">Centre operations</span>
+            <h3>Internal coordination</h3>
+            <p>Operational workflows are handled privately and do not appear on the public portal.</p>
+        </div>
+    </article>
+</section>
+
+<section class="platform-process" aria-labelledby="process-title">
+    <div class="section-heading">
+        <p class="eyebrow">Platform flow</p>
+        <h2 id="process-title">Procurement journey</h2>
+    </div>
+
+    <div class="flow-grid">
+        <div class="flow-step">
+            <span class="step-badge">1</span>
+            <h3>Register</h3>
+            <p>Farmers create a personal profile using their mobile number and basic details.</p>
+        </div>
+        <div class="flow-step">
+            <span class="step-badge">2</span>
+            <h3>Verify</h3>
+            <p>Location and profile information are stored for procurement context.</p>
+        </div>
+        <div class="flow-step">
+            <span class="step-badge">3</span>
+            <h3>Schedule</h3>
+            <p>Farmers can continue into booking and centre workflow steps when ready.</p>
+        </div>
+        <div class="flow-step">
+            <span class="step-badge">4</span>
+            <h3>Track</h3>
+            <p>Both farmers and staff can monitor progress through the procurement journey.</p>
+        </div>
+    </div>
+</section>
+
+<section class="info-panels" aria-label="Portal summary">
+    <article class="info-panel">
+        <div class="panel-copy">
+            <p class="eyebrow">For farmers</p>
+            <h3>Public access portal</h3>
+            <ul>
+                <li>Self-registration with mobile number</li>
+                <li>Farmer dashboard and profile updates</li>
+                <li>Clear journey from registration to tracking</li>
+            </ul>
+        </div>
+    </article>
+</section>
+{% endblock %}

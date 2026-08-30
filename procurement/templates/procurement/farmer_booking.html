@@ -1,0 +1,207 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Book Procurement | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="dashboard-head" aria-labelledby="booking-title">
+    <p class="eyebrow">Farmer booking</p>
+    <h1 id="booking-title">Book your procurement request</h1>
+    <p class="dashboard-subtitle">Select your location, available procurement centre, crop, and preferred date.</p>
+</section>
+
+<section class="work-panel" style="margin-bottom: 24px;">
+    <form method="post" class="form-stack" id="booking-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="form-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="field-group">
+            <label for="id_crop">Crop</label>
+            {{ form.crop }}
+            {% if form.crop.errors %}<p class="field-error">{{ form.crop.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="field-group">
+            <label for="id_quantity">Quantity (kg)</label>
+            {{ form.quantity }}
+            {% if form.quantity.errors %}<p class="field-error">{{ form.quantity.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="field-group">
+            <label for="id_preferred_date">Preferred date</label>
+            {{ form.preferred_date }}
+            {% if form.preferred_date.errors %}<p class="field-error">{{ form.preferred_date.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="field-group">
+            <label for="id_state">State / Union Territory</label>
+            {{ form.state }}
+            {% if form.state.errors %}<p class="field-error">{{ form.state.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="field-group">
+            <label for="id_district">District</label>
+            {{ form.district }}
+            <small id="district-status" class="field-help">Select a state first.</small>
+            {% if form.district.errors %}<p class="field-error">{{ form.district.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="field-group">
+            <label for="id_centre">Procurement Centre</label>
+            {{ form.centre }}
+            <small id="centre-status" class="field-help">Select a district first.</small>
+            {% if form.centre.errors %}<p class="field-error">{{ form.centre.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <button type="submit" class="primary-button">Submit booking</button>
+    </form>
+</section>
+
+<section class="work-panel">
+    <h2>Your recent bookings</h2>
+    <p><a href="{% url 'procurement:farmer_bookings' %}">View all tickets</a></p>
+    {% if bookings %}
+    <table class="striped-list" style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:8px;">Ticket</th>
+                <th style="text-align:left; padding:8px;">Date</th>
+                <th style="text-align:left; padding:8px;">Centre</th>
+                <th style="text-align:left; padding:8px;">Status</th>
+                <th style="text-align:right; padding:8px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td style="padding:8px;">{{ booking.token_number }}</td>
+                <td style="padding:8px;">{{ booking.preferred_date }}</td>
+                <td style="padding:8px;">{% if booking.centre %}{{ booking.centre.name }}{% else %}Pending{% endif %}</td>
+                <td style="padding:8px;">{{ booking.get_status_display }}</td>
+                <td style="padding:8px; text-align:right;">
+                    <a class="button" href="{% url 'procurement:farmer_ticket' booking.pk %}">View</a>
+                    <a class="button" href="{% url 'procurement:farmer_ticket_pdf' booking.pk %}">Download PDF</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No bookings yet.</p>
+    {% endif %}
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const stateSelect = document.getElementById('id_state');
+        const districtSelect = document.getElementById('id_district');
+        const centreSelect = document.getElementById('id_centre');
+        const districtStatus = document.getElementById('district-status');
+        const centreStatus = document.getElementById('centre-status');
+
+        function resetSelect(select, placeholder) {
+            select.innerHTML = '<option value="">' + placeholder + '</option>';
+            select.disabled = true;
+        }
+
+        function showStatus(element, message) {
+            if (element) element.textContent = message;
+        }
+
+        async function fetchJson(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Request failed');
+            }
+            return response.json();
+        }
+
+        function setOptions(select, items, placeholder) {
+            const options = ['<option value="">' + placeholder + '</option>'];
+            for (const item of items) {
+                options.push('<option value="' + item.id + '">' + item.name + '</option>');
+            }
+            select.innerHTML = options.join('');
+            select.disabled = items.length === 0;
+        }
+
+        function setCentreOptions(items) {
+            const options = ['<option value="">Select a procurement centre</option>'];
+            for (const item of items) {
+                options.push('<option value="' + item.id + '">' + item.name + '</option>');
+            }
+            centreSelect.innerHTML = options.join('');
+            centreSelect.disabled = items.length === 0;
+        }
+
+        async function loadDistricts() {
+            const stateId = stateSelect.value;
+            if (!stateId) {
+                resetSelect(districtSelect, 'Select district');
+                resetSelect(centreSelect, 'Select a procurement centre');
+                showStatus(districtStatus, 'Select a state first.');
+                showStatus(centreStatus, 'Select a district first.');
+                return;
+            }
+
+            showStatus(districtStatus, 'Loading districts...');
+            try {
+                const data = await fetchJson('/procurement/api/locations/districts/?state=' + encodeURIComponent(stateId));
+                setOptions(districtSelect, data, 'Select district');
+                if (!data.length) {
+                    showStatus(districtStatus, 'No districts found.');
+                } else {
+                    showStatus(districtStatus, '');
+                }
+                resetSelect(centreSelect, 'Select a procurement centre');
+                showStatus(centreStatus, 'Select a district first.');
+            } catch (error) {
+                showStatus(districtStatus, 'Unable to load districts. Please try again.');
+            }
+        }
+
+        async function loadCentres() {
+            const districtId = districtSelect.value;
+            if (!districtId) {
+                resetSelect(centreSelect, 'Select a procurement centre');
+                showStatus(centreStatus, 'Select a district first.');
+                return;
+            }
+
+            let params = new URLSearchParams();
+            params.set('district', districtId);
+
+            showStatus(centreStatus, 'Loading centres...');
+            try {
+                const data = await fetchJson('/procurement/api/procurement-centres/?' + params.toString());
+                setCentreOptions(data);
+                if (!data.length) {
+                    showStatus(centreStatus, 'No procurement centres found.');
+                } else {
+                    showStatus(centreStatus, '');
+                }
+            } catch (error) {
+                showStatus(centreStatus, 'Unable to load procurement centres. Please try again.');
+            }
+        }
+
+        // Finalize event handlers: state -> districts, district -> centres
+        stateSelect.addEventListener('change', function () {
+            districtSelect.value = '';
+            centreSelect.value = '';
+            loadDistricts();
+        });
+
+        districtSelect.addEventListener('change', function () {
+            centreSelect.value = '';
+            loadCentres();
+        });
+
+        // Initialize
+        resetSelect(districtSelect, 'Select district');
+        resetSelect(centreSelect, 'Select a procurement centre');
+        loadDistricts();
+    });
+</script>
+{% endblock %}

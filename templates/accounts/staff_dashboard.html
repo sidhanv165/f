@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Dashboard | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="dashboard-head" aria-labelledby="dashboard-title">
+    <p class="eyebrow">Centre operations</p>
+    <h1 id="dashboard-title">Welcome, {{ user.full_name|default:user.mobile }}</h1>
+    <p class="dashboard-subtitle">Signed in as {{ user.mobile }}</p>
+    <div class="action-row">
+        <a class="primary-button" href="{% url 'accounts:staff_profile' %}">Edit profile</a>
+        <a class="secondary-button" href="{% url 'procurement:staff_queue' %}">View queue</a>
+    </div>
+</section>
+
+<section class="metric-grid" aria-label="Centre queue status">
+    <article class="metric-card">
+        <span class="metric-label">Queue today</span>
+        <strong>{{ procurement_request_count|default:0 }}</strong>
+        <p>Farmer requests in the centre queue.</p>
+    </article>
+    <article class="metric-card">
+        <span class="metric-label">Pending</span>
+        <strong>{{ pending_request_count|default:0 }}</strong>
+        <p>Requests waiting for allocation.</p>
+    </article>
+    <article class="metric-card">
+        <span class="metric-label">Completed</span>
+        <strong>{{ completed_request_count|default:0 }}</strong>
+        <p>Requests finished in the queue.</p>
+    </article>
+</section>
+
+<section class="work-panel" aria-labelledby="staff-work-title">
+    <h2 id="staff-work-title">Centre Desk</h2>
+    <div class="table-shell">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Token</th>
+                    <th scope="col">Farmer</th>
+                    <th scope="col">Crop</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if recent_bookings %}
+                    {% for booking in recent_bookings %}
+                        <tr>
+                            <td>{{ booking.token_number }}</td>
+                            <td>{{ booking.farmer.full_name|default:booking.farmer.mobile }}</td>
+                            <td>{{ booking.crop }}</td>
+                            <td><span class="status-chip status-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4">No centre queue records yet.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

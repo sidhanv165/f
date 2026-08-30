@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Profile | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="auth-layout" aria-labelledby="profile-title">
+    <div class="auth-panel">
+        <p class="eyebrow">Staff profile</p>
+        <h1 id="profile-title">{{ user.full_name|default:user.mobile }}</h1>
+        <p class="dashboard-subtitle">Login ID: {{ user.mobile }}</p>
+
+        {% if form.non_field_errors %}
+            <div class="form-error">{{ form.non_field_errors|striptags }}</div>
+        {% endif %}
+
+        <form method="post" class="form-stack">
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div class="field-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="field-help">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                        <p class="field-error">{{ field.errors|striptags }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="primary-button">Save profile</button>
+        </form>
+
+        <p class="auth-switch">
+            <a href="{% url 'accounts:staff_dashboard' %}">Return to dashboard</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

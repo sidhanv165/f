@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Your Tickets | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="dashboard-head">
+    <p class="eyebrow">Your tickets</p>
+    <h1>Recent bookings & tickets</h1>
+    <p class="dashboard-subtitle">List of your recent procurement tickets. Click a row to view the ticket or download a PDF.</p>
+</section>
+
+<section class="work-panel">
+    {% if bookings %}
+    <table class="striped-list" style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:8px;">Ticket</th>
+                <th style="text-align:left; padding:8px;">Date</th>
+                <th style="text-align:left; padding:8px;">Centre</th>
+                <th style="text-align:left; padding:8px;">Crop / Qty</th>
+                <th style="text-align:left; padding:8px;">Status</th>
+                <th style="text-align:right; padding:8px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td style="padding:8px;">{{ booking.token_number }}</td>
+                <td style="padding:8px;">{{ booking.preferred_date }}</td>
+                <td style="padding:8px;">{% if booking.centre %}{{ booking.centre.name }}{% else %}Pending{% endif %}</td>
+                <td style="padding:8px;">{{ booking.crop }} / {{ booking.quantity }} kg</td>
+                <td style="padding:8px;">{{ booking.get_status_display }}</td>
+                <td style="padding:8px; text-align:right;">
+                    <a class="button" href="{% url 'procurement:farmer_ticket' booking.pk %}">View</a>
+                    <a class="button" href="{% url 'procurement:farmer_ticket_pdf' booking.pk %}">Download PDF</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if is_paginated %}
+    <nav class="pagination" aria-label="Pages" style="margin-top:12px;">
+        <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+        <div style="float:right;">
+            {% if page_obj.has_previous %}
+                <a class="button" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+
+            {% for p in paginator.page_range %}
+                {% if p == page_obj.number %}
+                    <strong style="margin:0 6px;">{{ p }}</strong>
+                {% else %}
+                    <a class="button" href="?page={{ p }}" style="margin:0 4px;">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a class="button" href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <p>No bookings yet.</p>
+    {% endif %}
+</section>
+
+{% endblock %}

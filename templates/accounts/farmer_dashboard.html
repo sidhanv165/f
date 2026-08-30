@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Farmer Dashboard | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="dashboard-head" aria-labelledby="dashboard-title">
+    <p class="eyebrow">Farmer workspace</p>
+    <h1 id="dashboard-title">Welcome, {{ user.full_name|default:user.mobile }}</h1>
+    <p class="dashboard-subtitle">Mobile: {{ user.mobile }}</p>
+    <div class="action-row">
+        <a class="primary-button" href="{% url 'accounts:farmer_profile' %}">Edit profile</a>
+        <a class="secondary-button" href="{% url 'procurement:farmer_booking_create' %}">Book procurement</a>
+    </div>
+</section>
+
+<section class="metric-grid" aria-label="Farmer procurement status">
+    <article class="metric-card">
+        <span class="metric-label">Bookings</span>
+        <strong>{{ user.procurement_requests.count }}</strong>
+        <p>Current farmer requests submitted.</p>
+    </article>
+    <article class="metric-card">
+        <span class="metric-label">Pending</span>
+        <strong>{% if user.procurement_requests %}{{ user.procurement_requests.all|length }}{% else %}0{% endif %}</strong>
+        <p>Requests awaiting staff review.</p>
+    </article>
+    <article class="metric-card">
+        <span class="metric-label">Latest status</span>
+        <strong>{% if user.procurement_requests.exists %}{{ user.procurement_requests.first.get_status_display }}{% else %}No request{% endif %}</strong>
+        <p>Most recent booking progress.</p>
+    </article>
+</section>
+
+<section class="work-panel" aria-labelledby="next-title">
+    <h2 id="next-title">Procurement Workflow</h2>
+    <div class="timeline">
+        <div>
+            <span class="step-badge">1</span>
+            <p>Update profile</p>
+        </div>
+        <div>
+            <span class="step-badge">2</span>
+            <p>Book centre request</p>
+        </div>
+        <div>
+            <span class="step-badge">3</span>
+            <p>Track status</p>
+        </div>
+        <div>
+            <span class="step-badge">4</span>
+            <p>Staff review</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

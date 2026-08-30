@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Choose Login | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="auth-layout" aria-labelledby="login-choice-title">
+    <div class="auth-panel">
+        <p class="eyebrow">Access portal</p>
+        <h1 id="login-choice-title">Choose your login</h1>
+
+        <div class="form-stack">
+            <a class="primary-button" href="{% url 'accounts:farmer_login' %}">Farmer Login</a>
+            <a class="primary-button secondary" href="{% url 'accounts:staff_login' %}">Procurement Staff Login</a>
+        </div>
+
+        <p class="auth-switch">
+            New farmer?
+            <a href="{% url 'accounts:register' %}">Register here</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

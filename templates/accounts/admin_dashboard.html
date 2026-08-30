@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="dashboard-head" aria-labelledby="dashboard-title">
+    <p class="eyebrow">Platform control</p>
+    <h1 id="dashboard-title">Admin Dashboard</h1>
+    <p class="dashboard-subtitle">Signed in as {{ user.mobile }}</p>
+</section>
+
+<section class="metric-grid" aria-label="Platform status">
+    <article class="metric-card">
+        <span class="metric-label">Registered users</span>
+        <strong>{{ total_users|default:"0" }}</strong>
+        <p>Farmers, staff, and administrators.</p>
+    </article>
+    <article class="metric-card">
+        <span class="metric-label">Farmers</span>
+        <strong>{{ farmer_count|default:"0" }}</strong>
+        <p>Public registration adds farmer accounts.</p>
+    </article>
+    <article class="metric-card">
+        <span class="metric-label">Staff users</span>
+        <strong>{{ staff_count|default:"0" }}</strong>
+        <p>Staff accounts are managed by admins.</p>
+    </article>
+</section>
+
+<section class="work-panel" aria-labelledby="admin-work-title">
+    <h2 id="admin-work-title">Administration</h2>
+    <div class="action-row">
+        <a class="primary-button compact" href="{% url 'admin:index' %}">Open Django Admin</a>
+    </div>
+</section>
+{% endblock %}

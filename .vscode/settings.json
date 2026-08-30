@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^python -c \"def f\\(a, \\*\\*\\*\\*\\*\\* \\*\\*k\\):\\\\n    print\\(a, k\\)\\\\nf\\(1, z=2\\)\\\\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

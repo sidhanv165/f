@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Booking Ticket {{ booking.token_number }} | Procurement Platform{% endblock %}
+
+{% block content %}
+<section class="dashboard-head" aria-labelledby="ticket-title">
+    <p class="eyebrow">Farmer ticket</p>
+    <h1 id="ticket-title">{{ booking.token_number }}</h1>
+    <p class="dashboard-subtitle">Your booking reference for procurement visit scheduling.</p>
+</section>
+
+<section class="work-panel" aria-labelledby="ticket-details-title" style="max-width: 760px; margin: 0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
+        <h2 id="ticket-details-title" style="margin:0;">Booking details</h2>
+        <div class="action-row">
+            <a class="primary-button" href="{% url 'procurement:farmer_ticket_pdf' booking.pk %}">Download PDF</a>
+            <a class="secondary-button" href="{% url 'procurement:farmer_booking_create' %}">Back to booking</a>
+        </div>
+    </div>
+
+    <div style="display:grid; gap:12px; border:1px solid #e2e8f0; border-radius:16px; padding:20px; background:#f8fafc;">
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">Farmer</span>
+            <strong>{{ booking.farmer.full_name|default:booking.farmer.mobile }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">Mobile</span>
+            <strong>{{ booking.farmer.mobile }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">State / UT</span>
+            <strong>{{ booking.state|default:"-" }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">District</span>
+            <strong>{{ booking.district|default:"-" }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">Procurement centre</span>
+            <strong>{{ booking.centre.name|default:"Waiting for assignment" }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">Visit date</span>
+            <strong>{{ booking.scheduled_visit_date }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">Crop</span>
+            <strong>{{ booking.crop }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <span style="color:#64748b;">Quantity</span>
+            <strong>{{ booking.quantity }} kg</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:16px;">
+            <span style="color:#64748b;">Status</span>
+            <span class="status-chip status-{{ booking.status }}">{{ booking.get_status_display }}</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
